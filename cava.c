@@ -33,6 +33,11 @@
 #define _CRT_SECURE_NO_WARNINGS 1
 #endif // _MSC_VER
 
+#ifdef _MSC_VER
+#include <fcntl.h>
+#include <io.h>
+#endif
+
 #include <signal.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -57,6 +62,7 @@
 #include "input/common.h"
 
 #include "output/terminal_noncurses.h"
+#include "output/raw.h"
 
 #ifndef _MSC_VER
 #ifdef NCURSES
@@ -66,7 +72,6 @@
 #endif
 
 #include "output/noritake.h"
-#include "output/raw.h"
 
 #include "input/alsa.h"
 #include "input/fifo.h"
@@ -507,6 +512,8 @@ as of 0.4.0 all options are specified in config file, see in '/home/username/.co
 
         int height, lines, width, remainder, fp;
         int *dimension_bar, *dimension_value;
+        HANDLE hPipe;
+
 
         if (p.orientation == ORIENT_LEFT || p.orientation == ORIENT_RIGHT) {
             dimension_bar = &height;
@@ -629,6 +636,54 @@ as of 0.4.0 all options are specified in config file, see in '/home/username/.co
                     height = p.ascii_range;
                 }
                 break;
+#endif
+
+
+#ifdef _MSC_VER
+            case OUTPUT_RAW:
+                //HANDLE hPipe;
+                LPTSTR pipeName = TEXT("\\\\.\\pipe\\cava_raw_output");
+                
+                // Create the named pipe
+                hPipe = CreateNamedPipe(pipeName,
+                                        PIPE_ACCESS_OUTBOUND,
+                                        PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+                                        PIPE_UNLIMITED_INSTANCES,
+                                        0,
+                                        0,
+                                        0,
+                                        NULL);
+
+                if (hPipe == INVALID_HANDLE_VALUE) {
+                    fprintf(stderr, "Failed to create named pipe\n");
+                    exit(EXIT_FAILURE);
+                }
+
+                // Connect to the named pipe
+                if (!ConnectNamedPipe(hPipe, NULL)) {
+                    fprintf(stderr, "Failed to connect to named pipe\n");
+                    CloseHandle(hPipe);
+                    exit(EXIT_FAILURE);
+                }
+
+                // Set the pipe handle to non-blocking mode
+                DWORD dwMode = PIPE_NOWAIT;
+                if (!SetNamedPipeHandleState(hPipe, &dwMode, NULL, NULL)) {
+                    fprintf(stderr, "Failed to set named pipe handle state\n");
+                    CloseHandle(hPipe);
+                    exit(EXIT_FAILURE);
+                }
+
+                // Use the named pipe for further output
+                //fp = _open_osfhandle((intptr_t)hPipe, _O_WRONLY | _O_BINARY);
+                fp = CreateFile(pipeName, GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+                if (fp == -1) {
+                    fprintf(stderr, "Failed to open named pipe\n");
+                    CloseHandle(hPipe);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+                
 #endif
             default:
                 exit(EXIT_FAILURE); // Can't happen.
@@ -1139,6 +1194,11 @@ as of 0.4.0 all options are specified in config file, see in '/home/username/.co
                     break;
 
 #endif // !_MSC_VER
+#ifdef _MSC_VER
+                case OUTPUT_RAW:
+                    rc = print_raw_windows_out(number_of_bars, fp, p.raw_format, p.bit_format,
+											   p.ascii_range, p.bar_delim, p.frame_delim, bars);
+#endif
                 default:
                     exit(EXIT_FAILURE); // Can't happen.
                 }

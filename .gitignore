@@ -24,3 +24,5 @@ version
 config_file.h
 .*
 /cava_win/cava/x64
+/cava_win/packages
+/cava_win/x64

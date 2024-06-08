@@ -153,6 +153,7 @@
     <ClCompile Include="..\..\output\sdl_cava.c" />
     <ClCompile Include="..\..\output\sdl_glsl.c" />
     <ClCompile Include="..\..\output\terminal_noncurses.c" />
+    <ClCompile Include="..\..\output\raw.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\cavacore.h" />
@@ -164,6 +165,7 @@
     <ClInclude Include="..\..\output\sdl_glsl.h" />
     <ClInclude Include="..\..\output\terminal_noncurses.h" />
     <ClInclude Include="..\..\util.h" />
+    <ClInclude Include="..\..\output\raw.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
