@@ -1,6 +1,5 @@
 // input: ALSA
 #include "input/alsa.h"
-#include "debug.h"
 #include "input/common.h"
 
 #include <alloca.h>
@@ -18,8 +17,7 @@ static void initialize_audio_parameters(snd_pcm_t **handle, struct audio_data *a
     if (err < 0) {
         fprintf(stderr, "error opening stream: %s\n", snd_strerror(err));
         exit(EXIT_FAILURE);
-    } else
-        debug("open stream successful\n");
+    }
 
     snd_pcm_hw_params_t *params;
     snd_pcm_hw_params_alloca(&params);      // assembling params
@@ -70,10 +68,8 @@ void *input_alsa(void *data) {
     initialize_audio_parameters(&handle, audio, &frames);
     snd_pcm_get_params(handle, &buffer_size, &period_size);
 
-    unsigned char buf[buffer_size];
+    unsigned char *buf = malloc(buffer_size);
     frames = period_size / ((audio->format / 8) * CHANNELS_COUNT);
-
-    signed char *buffer = malloc(period_size);
 
     while (!audio->terminate) {
 
@@ -81,18 +77,18 @@ void *input_alsa(void *data) {
 
         if (err == -EPIPE) {
             /* EPIPE means overrun */
-            debug("overrun occurred\n");
+            fprintf(stderr, "overrun occurred\n");
             snd_pcm_prepare(handle);
         } else if (err < 0) {
-            debug("error from read: %s\n", snd_strerror(err));
+            fprintf(stderr, "error from read: %s\n", snd_strerror(err));
         } else if (err != (int)frames) {
-            debug("short read, read %d %d frames\n", err, (int)frames);
+            fprintf(stderr, "short read, read %d %d frames\n", err, (int)frames);
         }
 
         write_to_cava_input_buffers(frames * CHANNELS_COUNT, buf, data);
     }
 
-    free(buffer);
+    free(buf);
     snd_pcm_close(handle);
     return NULL;
 }

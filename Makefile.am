@@ -8,7 +8,7 @@ cava_SOURCES = cava.c cavacore.c config.c input/common.c input/fifo.c input/shme
                output/terminal_noncurses.c output/raw.c output/noritake.c \
                cavacore.h config.h input/common.h input/fifo.h input/shmem.h \
                output/terminal_noncurses.h output/raw.h output/noritake.h \
-               debug.h util.h third_party/incbin.h
+               util.h third_party/incbin.h
 cava_CPPFLAGS = -DPACKAGE=\"$(PACKAGE)\" -DVERSION=\"$(VERSION)\" \
            -D_POSIX_SOURCE -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE_EXTENDED \
 	   -DFONTDIR=\"@FONT_DIR@\" -DFONTFILE=\"@FONT_FILE@\"
@@ -20,12 +20,20 @@ EXTRA_DIST = \
     output/shaders/northern_lights.frag \
     output/shaders/winamp_line_style_spectrum.frag \
     output/shaders/spectrogram.frag \
+    output/shaders/eye_of_phi.frag \
+    output/shaders/orion_circle.frag \
+    output/shaders/orion_circle_rotate.frag \
+    output/shaders/orion_saturn_subring.frag \
+    output/shaders/orion_saturn_core.frag \
+    output/themes/solarized_dark \
+    output/themes/tricolor \
     example_files/config \
     cava.psf \
     LICENSE \
     run_all_tests.sh \
     SHADERS.md \
-    .clang-format
+    .clang-format \
+    CMakeLists.txt
 
 if OSX
     cava_CFLAGS += -DNORT
