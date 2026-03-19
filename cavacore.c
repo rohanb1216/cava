@@ -170,7 +170,7 @@ struct cava_plan *cava_init(int number_of_bars, unsigned int rate, int channels,
 
     memset(p->input_buffer, 0, sizeof(double) * p->input_buffer_size);
 
-    memset(p->cava_fall, 0, sizeof(int) * number_of_bars * channels);
+    memset(p->cava_fall, 0, sizeof(double) * number_of_bars * channels);
     memset(p->cava_mem, 0, sizeof(double) * number_of_bars * channels);
     memset(p->cava_peak, 0, sizeof(double) * number_of_bars * channels);
     memset(p->prev_cava_out, 0, sizeof(double) * number_of_bars * channels);
@@ -403,7 +403,22 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
     }
     // process [smoothing]
     int overshoot = 0;
+    double smoothing_time = 0.0;
+    double fall_step = 0.0;
+    double integral_multiplier = 1.0;
+    double integral_weight = 0.0;
     double gravity_mod = pow((60 / p->framerate), 2.5) * 1.54 / p->noise_reduction;
+
+    if (new_samples > 0) {
+        smoothing_time = (double)new_samples * 44100.0 / (512.0 * p->rate * p->audio_channels);
+        fall_step = 0.028 * smoothing_time;
+        integral_multiplier = pow(p->noise_reduction, smoothing_time);
+        if (p->noise_reduction < 1.0) {
+            integral_weight = (1.0 - integral_multiplier) / (1.0 - p->noise_reduction);
+        } else {
+            integral_weight = smoothing_time;
+        }
+    }
 
     if (gravity_mod < 1)
         gravity_mod = 1;
@@ -413,12 +428,15 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
         // process [smoothing]: falloff
 
         if (cava_out[n] < p->prev_cava_out[n] && p->noise_reduction > 0.1) {
-            cava_out[n] =
-                p->cava_peak[n] * (1.0 - (p->cava_fall[n] * p->cava_fall[n] * gravity_mod));
+            double fall = p->cava_fall[n] + fall_step - 0.028;
+            if (fall < 0.0)
+                fall = 0.0;
+
+            cava_out[n] = p->cava_peak[n] * (1.0 - (fall * fall * gravity_mod));
 
             if (cava_out[n] < 0.0)
                 cava_out[n] = 0.0;
-            p->cava_fall[n] += 0.028;
+            p->cava_fall[n] += fall_step;
         } else {
             p->cava_peak[n] = cava_out[n];
             p->cava_fall[n] = 0.0;
@@ -426,7 +444,7 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
         p->prev_cava_out[n] = cava_out[n];
 
         // process [smoothing]: integral
-        cava_out[n] = p->cava_mem[n] * p->noise_reduction + cava_out[n];
+        cava_out[n] = p->cava_mem[n] * integral_multiplier + cava_out[n] * integral_weight;
         p->cava_mem[n] = cava_out[n];
         if (p->autosens) {
             // check if we overshoot target height
