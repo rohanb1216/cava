@@ -16,7 +16,7 @@
 # increase to make sensitivity increase even faster.
 ; autosens = 1
 
-# Manual sensitivity in %. If autosens is enabled, this will only be the initial value.
+# Manual sensitivity in %. If autosens is enabled this will not be used.
 # 200 means double height. Accepts only non-negative values.
 ; sensitivity = 100
 

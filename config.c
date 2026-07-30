@@ -607,6 +607,10 @@ bool validate_config(struct config_params *p, struct error_s *error) {
     }
     p->sens = p->sens / 100;
 
+    if (p->autosens) {
+        p->sens = 1;
+    }
+
     // validate: sdl_glsl_gain
     if (p->sdl_glsl_gain < 0) {
         write_errorf(error, "sdl_glsl_gain can't be negative\n");
