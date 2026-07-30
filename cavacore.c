@@ -535,9 +535,8 @@ JNIEXPORT jfloatArray JNICALL Java_com_karlstav_cava_MyGLRenderer_InitCava(
     jfloatArray cuttOffFreq = (*env)->NewFloatArray(env, number_of_bars_set + 1);
     float noise_reduction = pow((float)refresh_rate / 130, 0.75);
 
-    plan =
-        cava_init(number_of_bars_set, 44100, 1, 1, noise_reduction, lower_cut_off, higher_cut_off,
-                  CAVA_SCALING_LINEAR);
+    plan = cava_init(number_of_bars_set, 44100, 1, 1, noise_reduction, lower_cut_off,
+                     higher_cut_off, CAVA_SCALING_LINEAR);
     cava_in = (double *)malloc(plan->FFTbassbufferSize * sizeof(double));
     cava_out = (double *)malloc(plan->number_of_bars * sizeof(double));
     (*env)->SetFloatArrayRegion(env, cuttOffFreq, 0, plan->number_of_bars + 1,

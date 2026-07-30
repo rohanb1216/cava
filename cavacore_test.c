@@ -60,9 +60,8 @@ void main() {
            "%.2f noise reduction, %d - %d MHz bandwidth.\n",
            bars_per_channel, rate, channels, noise_reduction, low_cut_off, high_cut_off);
 
-    struct cava_plan *plan =
-        cava_init(bars_per_channel, rate, channels, 1, noise_reduction, low_cut_off, high_cut_off,
-                  CAVA_SCALING_LINEAR);
+    struct cava_plan *plan = cava_init(bars_per_channel, rate, channels, 1, noise_reduction,
+                                       low_cut_off, high_cut_off, CAVA_SCALING_LINEAR);
     if (plan->status < 0) {
         fprintf(stderr, "Error: %s\n", plan->error_message);
         exit(1);

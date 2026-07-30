@@ -119,8 +119,8 @@ enum input_method default_methods[] = {
     INPUT_PULSE,     INPUT_PIPEWIRE,  INPUT_WINSCAP, INPUT_OSS,
 };
 
-char *outputMethod, *orientation, *channels, *xaxisScale, *scalingMode, *monoOption, *fragmentShader,
-    *vertexShader, *blendDirection;
+char *outputMethod, *orientation, *channels, *xaxisScale, *scalingMode, *monoOption,
+    *fragmentShader, *vertexShader, *blendDirection;
 
 const char *input_method_names[] = {
     "fifo",  "portaudio", "coreaudio", "pipewire", "alsa",    "pulse",
