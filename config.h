@@ -105,6 +105,7 @@ enum mono_option { LEFT, RIGHT, AVERAGE };
 enum data_format { FORMAT_ASCII = 0, FORMAT_BINARY = 1, FORMAT_NTK3000 = 2 };
 
 enum xaxis_scale { NONE, FREQUENCY, NOTE };
+enum scaling_mode { SCALING_LINEAR, SCALING_DECIBEL };
 
 enum orientation {
     ORIENT_BOTTOM,
@@ -127,6 +128,7 @@ struct config_params {
     enum input_method input;
     enum output_method output;
     enum xaxis_scale xaxis;
+    enum scaling_mode scaling;
     enum mono_option mono_opt;
     enum orientation orientation;
     enum orientation blendDirection;

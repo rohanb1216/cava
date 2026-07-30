@@ -965,7 +965,7 @@ Keys:\n\
 
             struct cava_plan *plan =
                 cava_init(number_of_bars / output_channels, audio.rate, audio.channels, p.autosens,
-                          p.noise_reduction, p.lower_cut_off, p.upper_cut_off);
+                          p.noise_reduction, p.lower_cut_off, p.upper_cut_off, p.scaling);
 
             if (plan->status == -1) {
                 cleanup();

@@ -119,7 +119,7 @@ enum input_method default_methods[] = {
     INPUT_PULSE,     INPUT_PIPEWIRE,  INPUT_WINSCAP, INPUT_OSS,
 };
 
-char *outputMethod, *orientation, *channels, *xaxisScale, *monoOption, *fragmentShader,
+char *outputMethod, *orientation, *channels, *xaxisScale, *scalingMode, *monoOption, *fragmentShader,
     *vertexShader, *blendDirection;
 
 const char *input_method_names[] = {
@@ -522,6 +522,17 @@ bool validate_config(struct config_params *p, struct error_s *error) {
         p->xaxis = NOTE;
     }
 
+    p->scaling = SCALING_LINEAR;
+    if (strcmp(scalingMode, "decibel") == 0) {
+        p->scaling = SCALING_DECIBEL;
+    } else if (strcmp(scalingMode, "linear") != 0) {
+        write_errorf(error,
+                     "scaling mode %s is not supported, supported scaling modes are: 'linear' and "
+                     "'decibel'\n",
+                     scalingMode);
+        return false;
+    }
+
     // validate: output channels
     p->stereo = -1;
     if (strcmp(channels, "mono") == 0) {
@@ -772,6 +783,7 @@ bool load_config(char configPath[PATH_MAX], struct config_params *p, struct erro
     p->theme = malloc(sizeof(char) * 64);
 
     xaxisScale = malloc(sizeof(char) * 32);
+    scalingMode = malloc(sizeof(char) * 32);
     channels = malloc(sizeof(char) * 32);
     monoOption = malloc(sizeof(char) * 32);
     p->raw_target = malloc(sizeof(char) * 129);
@@ -811,11 +823,13 @@ bool load_config(char configPath[PATH_MAX], struct config_params *p, struct erro
 
     free(orientation);
     free(xaxisScale);
+    free(scalingMode);
     free(outputMethod);
 
     outputMethod = strdup(iniparser_getstring(ini, "output:method", "noncurses"));
     orientation = strdup(iniparser_getstring(ini, "output:orientation", "bottom"));
     xaxisScale = strdup(iniparser_getstring(ini, "output:xaxis", "none"));
+    scalingMode = strdup(iniparser_getstring(ini, "general:scaling", "linear"));
     p->monstercat = iniparser_getdouble(ini, "smoothing:monstercat", 0);
     p->waves = iniparser_getint(ini, "smoothing:waves", 0);
     p->noise_reduction = iniparser_getdouble(ini, "smoothing:noise_reduction", 77);
@@ -1024,6 +1038,7 @@ bool load_config(char configPath[PATH_MAX], struct config_params *p, struct erro
     GetPrivateProfileString("output", "xaxis", "none", xaxisScale, 16, configPath);
     GetPrivateProfileString("output", "orientation", "bottom", orientation, 16, configPath);
     GetPrivateProfileString("color", "blend_orientation", "up", orientation, 16, configPath);
+    GetPrivateProfileString("general", "scaling", "linear", scalingMode, 16, configPath);
 
     p->fixedbars = GetPrivateProfileInt("general", "bars", 0, configPath);
 
