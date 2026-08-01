@@ -173,10 +173,9 @@
 # use one of the predefined ones.
 ; method = noncurses
 
-# Orientation of the visualization. Can be 'bottom', 'top', 'left', 'right' or
-# 'horizontal'. Default is 'bottom'. 'left and 'right' are only supported on sdl
-# and ncurses output. 'horizontal' (bars go up and down from center) is only supported
-# on noncurses output.
+# Orientation of the visualization. Can be 'bottom', 'top', 'left', 'right',
+# 'horizontal' (bars go up and down from center) or 'vertical' (bars go left and right).
+# Default is 'bottom'.
 # Note: many fonts have weird or missing glyphs for characters used in orientations
 # other than 'bottom', which can make output not look right.
 ; orientation = bottom
@@ -190,10 +189,10 @@
 ; mono_option = average
 ; reverse = 0
 
-# Only valid if orientation is set to 'horizontal'.
-# Set 'horizontal_stereo' to 1 to have left channel bars at top and right channel at bottom.
-# Set 'left_bottom' to 0 to have right channel at top and left channel at bottom.
-; horizontal_stereo = 0
+# Split channels when using 'horizontal' or 'vertical' orientation.
+# Set 'split_stereo' to 1 to have left channel bars at top (left) and right channel at bottom (right).
+# Set 'left_bottom' to 0 to have right channel at top and left channel at bottom for 'horizontal' orientation.
+; split_stereo = 0
 ; left_bottom = 1
 
 # Raw output target.
