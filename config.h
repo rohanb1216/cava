@@ -13,6 +13,18 @@
 #define HAS_PORTAUDIO false
 #endif
 
+#ifdef COREAUDIO
+#define HAS_COREAUDIO true
+#else
+#define HAS_COREAUDIO false
+#endif
+
+#ifdef COREAUDIO_TAP
+#define HAS_COREAUDIO_TAP true
+#else
+#define HAS_COREAUDIO_TAP false
+#endif
+
 #ifdef ALSA
 #define HAS_ALSA true
 #else
@@ -67,6 +79,7 @@
 enum input_method {
     INPUT_FIFO,
     INPUT_PORTAUDIO,
+    INPUT_COREAUDIO,
     INPUT_PIPEWIRE,
     INPUT_ALSA,
     INPUT_PULSE,
@@ -92,6 +105,7 @@ enum mono_option { LEFT, RIGHT, AVERAGE };
 enum data_format { FORMAT_ASCII = 0, FORMAT_BINARY = 1, FORMAT_NTK3000 = 2 };
 
 enum xaxis_scale { NONE, FREQUENCY, NOTE };
+enum scaling_mode { SCALING_LINEAR, SCALING_DECIBEL };
 
 enum orientation {
     ORIENT_BOTTOM,
@@ -107,13 +121,14 @@ struct config_params {
         **horizontal_gradient_colors, *data_format, *vertex_shader, *fragment_shader, *theme;
 
     char bar_delim, frame_delim;
-    double monstercat, integral, gravity, ignore, sens, noise_reduction, max_height, sdl_glsl_gain;
+    double monstercat, sens, noise_reduction, max_height, sdl_glsl_gain;
 
     unsigned int lower_cut_off, upper_cut_off;
     double *userEQ;
     enum input_method input;
     enum output_method output;
     enum xaxis_scale xaxis;
+    enum scaling_mode scaling;
     enum mono_option mono_opt;
     enum orientation orientation;
     enum orientation blendDirection;

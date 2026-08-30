@@ -13,8 +13,14 @@ double *cava_in;
 double *cava_out;
 #endif
 
+static double amplitude_to_decibels(double value) {
+    // Magic number 20 comes from converting amplitude ratios to decibels.
+    return 20 * log10(value);
+}
+
 struct cava_plan *cava_init(int number_of_bars, unsigned int rate, int channels, int autosens,
-                            double noise_reduction, int low_cut_off, int high_cut_off) {
+                            double noise_reduction, int low_cut_off, int high_cut_off,
+                            int scaling_mode) {
     struct cava_plan *p = malloc(sizeof(struct cava_plan));
     p->status = 0;
 
@@ -82,6 +88,11 @@ struct cava_plan *cava_init(int number_of_bars, unsigned int rate, int channels,
         p->status = -1;
         return p;
     }
+    if (scaling_mode != CAVA_SCALING_LINEAR && scaling_mode != CAVA_SCALING_DECIBEL) {
+        snprintf(p->error_message, 1024, "unknown scaling mode: %d\n", scaling_mode);
+        p->status = -1;
+        return p;
+    }
 
     p->number_of_bars = number_of_bars;
     p->audio_channels = channels;
@@ -93,6 +104,7 @@ struct cava_plan *cava_init(int number_of_bars, unsigned int rate, int channels,
     p->framerate = 75;
     p->frame_skip = 1;
     p->noise_reduction = noise_reduction;
+    p->scaling_mode = scaling_mode;
 
     int fftw_flag = FFTW_MEASURE;
 #ifdef __ANDROID__
@@ -306,9 +318,14 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
 
     int silence = 1;
     if (new_samples > 0) {
-        p->framerate -= p->framerate / 64;
-        p->framerate += (double)((p->rate * p->audio_channels * p->frame_skip) / new_samples) / 64;
+        // process: approximate actual framerate. This will be off by +10% at 60 fps, but should be
+        // good enough for the autosens and smoothing algorithms to be adjusted accordingly if
+        // framerate is a lot more or less.
+        p->framerate -= p->framerate / 64.0;
+        p->framerate +=
+            (double)(p->rate * p->frame_skip) / (new_samples / p->audio_channels) / 64.0;
         p->frame_skip = 1;
+
         // shifting input buffer
         for (int n = p->input_buffer_size - 1; n >= new_samples; n--) {
             p->input_buffer[n] = p->input_buffer[n - new_samples];
@@ -316,7 +333,12 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
 
         // fill the input buffer
         for (int n = 0; n < new_samples; n++) {
-            p->input_buffer[new_samples - n - 1] = cava_in[n];
+            if (p->scaling_mode == CAVA_SCALING_DECIBEL) {
+                // Audio signals come in the range [-32768, 32768], normalize to [-1, 1].
+                p->input_buffer[new_samples - n - 1] = cava_in[n] / 32768.0;
+            } else {
+                p->input_buffer[new_samples - n - 1] = cava_in[n];
+            }
             if (cava_in[n]) {
                 silence = 0;
             }
@@ -385,12 +407,28 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
             }
         }
 
-        // getting average multiply with eq
-        temp_l *= p->eq[n];
+        // getting average and applying configured scaling
+        if (p->scaling_mode == CAVA_SCALING_DECIBEL) {
+            const double max_db = 70;
+            temp_l = amplitude_to_decibels(temp_l) / max_db;
+            if (!isfinite(temp_l)) {
+                temp_l = 0;
+            }
+        } else {
+            temp_l *= p->eq[n];
+        }
         cava_out[n] = temp_l;
 
         if (p->audio_channels == 2) {
-            temp_r *= p->eq[n];
+            if (p->scaling_mode == CAVA_SCALING_DECIBEL) {
+                const double max_db = 70;
+                temp_r = amplitude_to_decibels(temp_r) / max_db;
+                if (!isfinite(temp_r)) {
+                    temp_r = 0;
+                }
+            } else {
+                temp_r *= p->eq[n];
+            }
             cava_out[n + p->number_of_bars] = temp_r;
         }
     }
@@ -403,40 +441,22 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
     }
     // process [smoothing]
     int overshoot = 0;
-    double smoothing_time = 0.0;
-    double fall_step = 0.0;
-    double integral_multiplier = 1.0;
-    double integral_weight = 0.0;
-    double gravity_mod = pow((60 / p->framerate), 2.5) * 1.54 / p->noise_reduction;
 
-    if (new_samples > 0) {
-        smoothing_time = (double)new_samples * 44100.0 / (512.0 * p->rate * p->audio_channels);
-        fall_step = 0.028 * smoothing_time;
-        integral_multiplier = pow(p->noise_reduction, smoothing_time);
-        if (p->noise_reduction < 1.0) {
-            integral_weight = (1.0 - integral_multiplier) / (1.0 - p->noise_reduction);
-        } else {
-            integral_weight = smoothing_time;
-        }
-    }
-
-    if (gravity_mod < 1)
-        gravity_mod = 1;
+    double framerate_mod = 66 / p->framerate;
+    double gravity_mod = pow((framerate_mod), 2.5) * 2 / p->noise_reduction;
+    double integral_mod = pow((framerate_mod), 0.1);
 
     for (int n = 0; n < p->number_of_bars * p->audio_channels; n++) {
 
         // process [smoothing]: falloff
 
         if (cava_out[n] < p->prev_cava_out[n] && p->noise_reduction > 0.1) {
-            double fall = p->cava_fall[n] + fall_step - 0.028;
-            if (fall < 0.0)
-                fall = 0.0;
-
-            cava_out[n] = p->cava_peak[n] * (1.0 - (fall * fall * gravity_mod));
+            cava_out[n] =
+                p->cava_peak[n] * (1.0 - (p->cava_fall[n] * p->cava_fall[n] * gravity_mod));
 
             if (cava_out[n] < 0.0)
                 cava_out[n] = 0.0;
-            p->cava_fall[n] += fall_step;
+            p->cava_fall[n] += 0.028;
         } else {
             p->cava_peak[n] = cava_out[n];
             p->cava_fall[n] = 0.0;
@@ -444,7 +464,8 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
         p->prev_cava_out[n] = cava_out[n];
 
         // process [smoothing]: integral
-        cava_out[n] = p->cava_mem[n] * integral_multiplier + cava_out[n] * integral_weight;
+        cava_out[n] = p->cava_mem[n] * p->noise_reduction / integral_mod + cava_out[n];
+
         p->cava_mem[n] = cava_out[n];
         if (p->autosens) {
             // check if we overshoot target height
@@ -458,13 +479,13 @@ void cava_execute(double *cava_in, int new_samples, double *cava_out, struct cav
     // calculating automatic sense adjustment
     if (p->autosens) {
         if (overshoot) {
-            p->sens = p->sens * 0.98;
+            p->sens = p->sens * (1 - (0.02 * framerate_mod));
             p->sens_init = 0;
         } else {
             if (!silence) {
-                p->sens = p->sens * 1.001;
+                p->sens = p->sens * (1 + (0.001 * framerate_mod * p->autosens));
                 if (p->sens_init)
-                    p->sens = p->sens * 1.1;
+                    p->sens = p->sens * (1 + (0.1 * framerate_mod));
             }
         }
     }
@@ -514,8 +535,8 @@ JNIEXPORT jfloatArray JNICALL Java_com_karlstav_cava_MyGLRenderer_InitCava(
     jfloatArray cuttOffFreq = (*env)->NewFloatArray(env, number_of_bars_set + 1);
     float noise_reduction = pow((float)refresh_rate / 130, 0.75);
 
-    plan =
-        cava_init(number_of_bars_set, 44100, 1, 1, noise_reduction, lower_cut_off, higher_cut_off);
+    plan = cava_init(number_of_bars_set, 44100, 1, 1, noise_reduction, lower_cut_off,
+                     higher_cut_off, CAVA_SCALING_LINEAR);
     cava_in = (double *)malloc(plan->FFTbassbufferSize * sizeof(double));
     cava_out = (double *)malloc(plan->number_of_bars * sizeof(double));
     (*env)->SetFloatArrayRegion(env, cuttOffFreq, 0, plan->number_of_bars + 1,
@@ -542,7 +563,7 @@ JNIEXPORT jdoubleArray JNICALL Java_com_karlstav_cava_MyGLRenderer_ExecCava(JNIE
 JNIEXPORT int JNICALL Java_com_karlstav_cava_CavaCoreTest_InitCava(JNIEnv *env, jobject thiz,
                                                                    jint number_of_bars_set) {
 
-    plan = cava_init(number_of_bars_set, 44100, 1, 1, 0.7, 50, 10000);
+    plan = cava_init(number_of_bars_set, 44100, 1, 1, 0.7, 50, 10000, CAVA_SCALING_LINEAR);
     return 1;
 }
 

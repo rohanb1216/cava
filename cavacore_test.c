@@ -28,8 +28,8 @@ void main() {
     double noise_reduction = 0.77;
     int low_cut_off = 50;
     int high_cut_off = 10000;
-    double blueprint_200MHz[10] = {0, 0, 0.940, 0.004, 0, 0, 0, 0, 0, 0};
-    double blueprint_2000MHz[10] = {0, 0, 0, 0, 0, 0, 0.646, 0.002, 0, 0};
+    double blueprint_200MHz[10] = {0, 0, 0.994, 0.004, 0, 0, 0, 0, 0, 0};
+    double blueprint_2000MHz[10] = {0, 0, 0, 0, 0, 0, 0.683, 0.002, 0, 0};
 #ifdef AUDIO_INPUT
     struct audio_data audio;
     memset(&audio, 0, sizeof(audio));
@@ -60,8 +60,8 @@ void main() {
            "%.2f noise reduction, %d - %d MHz bandwidth.\n",
            bars_per_channel, rate, channels, noise_reduction, low_cut_off, high_cut_off);
 
-    struct cava_plan *plan =
-        cava_init(bars_per_channel, rate, channels, 1, noise_reduction, low_cut_off, high_cut_off);
+    struct cava_plan *plan = cava_init(bars_per_channel, rate, channels, 1, noise_reduction,
+                                       low_cut_off, high_cut_off, CAVA_SCALING_LINEAR);
     if (plan->status < 0) {
         fprintf(stderr, "Error: %s\n", plan->error_message);
         exit(1);

@@ -54,3 +54,12 @@ cmake --build .
 # Usage
 
 See cavacore.h for documentation and the cavacore_test.c application for how to use.
+
+# License
+
+cavacore is licensed under the MIT License, which is permissive: you can use, modify, and redistribute it in
+proprietary or open-source projects, as long as the copyright notice and license text are preserved.
+
+FFTW however is licensed under the GNU GPL (for standard FFTW builds), which is a copyleft license. If your distributed
+binary links against cavacore it will also have to link against the GPL-licensed FFTW, the combined distribution is
+generally subject to GPL terms, including making source code available under GPL-compatible licensing.

@@ -25,6 +25,7 @@ EXTRA_DIST = \
     output/shaders/orion_circle_rotate.frag \
     output/shaders/orion_saturn_subring.frag \
     output/shaders/orion_saturn_core.frag \
+    output/shaders/winamp_spectrum.frag \
     output/themes/solarized_dark \
     output/themes/tricolor \
     example_files/config \
@@ -60,6 +61,14 @@ endif
 
 if PORTAUDIO
     cava_SOURCES += input/portaudio.c input/portaudio.h
+endif
+
+if COREAUDIO
+    cava_SOURCES += input/coreaudio.c input/coreaudio.h
+endif
+
+if COREAUDIO_TAP
+    cava_SOURCES += input/coreaudio_tap.m input/coreaudio_tap.h
 endif
 
 if PIPEWIRE

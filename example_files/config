@@ -8,21 +8,21 @@
 # Auto reload config if the configuration file has changed. 1 = on, 0 = off.
 ; live-config = 0
 
-# Smoothing mode. Can be 'normal', 'scientific' or 'waves'. DEPRECATED as of 0.6.0
-; mode = normal
-
 # Accepts only non-negative values.
 ; framerate = 60
 
-# 'autosens' will attempt to decrease sensitivity if the bars peak. 1 = on, 0 = off
-# new as of 0.6.0 autosens of low values (dynamic range)
-# 'overshoot' allows bars to overshoot (in % of terminal height) without initiating autosens. DEPRECATED as of 0.6.0
+# 'autosens' will attempt to decrease sensitivity if the bars peak and increase slowly as
+# long as the bars don't peak. 0 = off, 1 = normal, 2..n = more aggressive.
+# increase to make sensitivity increase even faster.
 ; autosens = 1
-; overshoot = 20
 
-# Manual sensitivity in %. If autosens is enabled, this will only be the initial value.
+# Manual sensitivity in %. If autosens is enabled this will not be used.
 # 200 means double height. Accepts only non-negative values.
 ; sensitivity = 100
+
+# Scaling can be 'linear' (default) or 'decibel'. Linear scaling provides a clear visualisation of music when using
+# fewer bars (less than 100). While decibel scaling more correctly resembles how sound is perceived.
+; scaling = linear
 
 # The number of bars (0-512). 0 sets it to auto (fill up console).
 # Bars' width and space between bars in number of characters.
@@ -60,9 +60,9 @@
 
 [input]
 
-# Audio capturing method. Possible methods are: 'fifo', 'portaudio', 'pipewire', 'alsa', 'pulse', 'sndio', 'oss', 'jack' or 'shmem'
-# Defaults to 'oss', 'pipewire', 'sndio', 'jack', 'pulse', 'alsa', 'portaudio' or 'fifo', in that order, dependent on what support cava was built with.
-# On Mac it defaults to 'portaudio' or 'fifo'
+# Audio capturing method. Possible methods are: 'fifo', 'portaudio', 'coreaudio', 'pipewire', 'alsa', 'pulse', 'sndio', 'oss', 'jack' or 'shmem'
+# Defaults to 'oss', 'pipewire', 'sndio', 'jack', 'pulse', 'coreaudio', 'alsa', 'portaudio' or 'fifo', in that order, dependent on what support cava was built with.
+# On Mac it defaults to 'coreaudio', 'portaudio' or 'fifo'
 # On Windows this is automatic and no input settings are needed.
 #
 # Each input method uses the same config variable 'source'
@@ -77,6 +77,14 @@
 # For alsa 'source' will be the capture device.
 # For fifo 'source' will be the path to fifo-file.
 # For shmem 'source' will be /squeezelite-AA:BB:CC:DD:EE:FF where 'AA:BB:CC:DD:EE:FF' will be squeezelite's MAC address
+#
+# For coreaudio 'source' can be:
+#   'auto' (default output device), 'auto_input' (default input device), 'list',
+#   a 1-based device index from 'list', or an exact device name.
+#
+# On macOS 14.2+ with tap support compiled in, coreaudio can capture system output
+# without a loopback interface using:
+#   'tap' (stereo system mix) or 'tap_mono' (mono system mix)
 #
 # For sndio 'source' will be a raw recording audio descriptor or a monitoring sub-device, e.g. 'rsnd/2' or 'snd/1'. Default: 'default'.
 # README.md contains further information on how to setup CAVA for sndio.
@@ -103,6 +111,9 @@
 ; source = /squeezelite-AA:BB:CC:DD:EE:FF
 
 ; method = portaudio
+; source = auto
+
+; method = coreaudio
 ; source = auto
 
 ; method = sndio
@@ -162,10 +173,9 @@
 # use one of the predefined ones.
 ; method = noncurses
 
-# Orientation of the visualization. Can be 'bottom', 'top', 'left', 'right' or
-# 'horizontal'. Default is 'bottom'. 'left and 'right' are only supported on sdl
-# and ncurses output. 'horizontal' (bars go up and down from center) is only supported
-# on noncurses output.
+# Orientation of the visualization. Can be 'bottom', 'top', 'left', 'right',
+# 'horizontal' (bars go up and down from center) or 'vertical' (bars go left and right).
+# Default is 'bottom'.
 # Note: many fonts have weird or missing glyphs for characters used in orientations
 # other than 'bottom', which can make output not look right.
 ; orientation = bottom
@@ -179,10 +189,10 @@
 ; mono_option = average
 ; reverse = 0
 
-# Only valid if orientation is set to 'horizontal'.
-# Set 'horizontal_stereo' to 1 to have left channel bars at top and right channel at bottom.
-# Set 'left_bottom' to 0 to have right channel at top and left channel at bottom.
-; horizontal_stereo = 0
+# Split channels when using 'horizontal' or 'vertical' orientation.
+# Set 'split_stereo' to 1 to have left channel bars at top (left) and right channel at bottom (right).
+# Set 'left_bottom' to 0 to have right channel at top and left channel at bottom for 'horizontal' orientation.
+; split_stereo = 0
 ; left_bottom = 1
 
 # Raw output target.
@@ -233,6 +243,7 @@
 ; fragment_shader = northern_lights.frag
 ; fragment_shader = spectrogram.frag
 ; fragment_shader = winamp_line_style_spectrum.frag
+; fragment_shader = winamp_spectrum.frag
 
 # Orion shaders (use with: method = sdl_glsl)
 # Static Orion
@@ -314,23 +325,9 @@
 
 [smoothing]
 
-# Percentage value for integral smoothing. Takes values from 0 - 100.
-# Higher values means smoother, but less precise. 0 to disable.
-# DEPRECATED as of 0.8.0, use noise_reduction instead
-; integral = 77
-
 # Disables or enables the so-called "Monstercat smoothing" with or without "waves". Set to 0 to disable.
 ; monstercat = 0
 ; waves = 0
-
-# Set gravity percentage for "drop off". Higher values mean bars will drop faster.
-# Accepts only non-negative values. 50 means half gravity, 200 means double. Set to 0 to disable "drop off".
-# DEPRECATED as of 0.8.0, use noise_reduction instead
-; gravity = 100
-
-# In bar height, bars that would have been lower than this will not be drawn.
-# DEPRECATED as of 0.8.0
-; ignore = 0
 
 # Noise reduction, int 0 - 100. default 77
 # the raw visualization is very noisy, this factor adjusts the integral and gravity filters to keep the signal smooth
@@ -343,6 +340,7 @@
 # This one is tricky. You can have as many keys as you want.
 # Remember to uncomment more than one key! More keys = more precision.
 # Look at readme.md on github for further explanations and examples.
+# Not supported with decibel scaling.
 ; 1 = 1 # bass
 ; 2 = 1
 ; 3 = 1 # midtone
