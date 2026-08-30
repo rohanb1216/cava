@@ -562,6 +562,7 @@ void input_winscap(void *data) {
             DWORD waitResult = WaitForSingleObject(hEvent, INFINITE);
             if (waitResult != WAIT_OBJECT_0) {
                 // Handle error or termination
+                Sleep(1);
                 continue;
             }
 
