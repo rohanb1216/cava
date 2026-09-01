@@ -562,7 +562,7 @@ void input_winscap(void *data) {
             DWORD waitResult = WaitForSingleObject(hEvent, INFINITE);
             if (waitResult != WAIT_OBJECT_0) {
                 // Handle error or termination
-                Sleep(1);
+                //Sleep(1);
                 continue;
             }
 
@@ -596,6 +596,7 @@ void input_winscap(void *data) {
 
                 if (flags & AUDCLNT_BUFFERFLAGS_SILENT) {
                     write_silent_frame(audio, pCapture, numFramesAvailable, packetLength);
+                    ResetEvent(hEvent);
                     continue;
                 }
 
